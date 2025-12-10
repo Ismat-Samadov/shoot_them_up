@@ -31,6 +31,7 @@ export default class GameScene extends Phaser.Scene {
   private gameOver: boolean = false;
   private isMobile: boolean = false;
   private pointer: Phaser.Input.Pointer | null = null;
+  private waveTransitioning: boolean = false;
 
   constructor() {
     super({ key: "GameScene" });
@@ -284,9 +285,11 @@ export default class GameScene extends Phaser.Scene {
 
     // Check if wave is complete (all enemies spawned and accounted for)
     if (
+      !this.waveTransitioning &&
       this.enemiesSpawned >= this.enemiesInWave &&
       this.enemiesDefeated >= this.enemiesInWave
     ) {
+      this.waveTransitioning = true;
       this.nextWave();
     }
   }
@@ -321,6 +324,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   spawnWave() {
+    this.waveTransitioning = false;
     this.enemiesDefeated = 0;
     this.enemiesSpawned = 0;
     this.enemiesInWave = 5 + this.wave * 2;
@@ -508,7 +512,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   hitPlayer(
-    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    _player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
     enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
   ) {
     const enemyObj = enemy as Phaser.GameObjects.Container;
@@ -543,7 +547,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   collectPowerup(
-    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    _player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
     powerup: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
   ) {
     const powerupObj = powerup as Phaser.GameObjects.Container;

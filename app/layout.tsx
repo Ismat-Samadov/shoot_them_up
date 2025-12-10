@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Space Shooter - Epic Shoot'em Up",
-  description: "An engaging vertical shoot'em up game with stunning visuals and smooth gameplay",
+  description: "An engaging vertical shoot'em up game with stunning visuals, smooth auto-fire gameplay, and intuitive ship designs",
   manifest: "/manifest.json",
   themeColor: "#0a0a0f",
   appleWebApp: {
@@ -12,8 +12,8 @@ export const metadata: Metadata = {
     title: "Space Shooter",
   },
   icons: {
-    icon: "/favicon.ico",
-    apple: "/icon-192x192.png",
+    icon: "/icon.svg",
+    apple: "/icon-192x192.svg",
   },
 };
 

@@ -6,17 +6,20 @@ A modern, engaging vertical shoot'em up game built with Next.js, TypeScript, and
 
 ### Game Mechanics
 - **Player Controls**: Smooth ship movement with keyboard (Arrow keys/WASD) or touch controls
-- **Combat System**: Auto-firing bullets with satisfying collision detection
-- **Enemy Waves**: Progressive difficulty with 3 enemy types (fast/weak, medium, slow/strong)
+- **Player Ship**: Distinctive cyan arrow-shaped spaceship with wings and engine glow
+- **Combat System**: Automatic continuous fire - no button pressing needed!
+- **Enemy Waves**: Progressive difficulty with 3 distinct enemy types (scout/cruiser/battleship)
 - **Powerup System**:
   - Blue Shield: Absorbs one hit
   - Green Speed Boost: Increases movement speed for 5 seconds
-  - Pink Rapid Fire: Faster shooting for 5 seconds
+  - Pink Rapid Fire: Even faster automatic shooting for 5 seconds
 
 ### Visual Effects
+- **Intuitive Design**: Player ship (arrow pointing up) vs enemy ships (geometric shapes pointing down/rotating)
 - **Neon Aesthetic**: Cyberpunk-inspired color scheme with glow effects
 - **Particle Systems**: Star field background, bullet trails, and explosions
-- **Smooth Animations**: Tweened movements, fade effects, and scaling transitions
+- **Smooth Animations**: Rotating enemies, tweened movements, fade effects, and scaling transitions
+- **Color-Coded Threats**: Red scouts, purple cruisers, orange battleships for instant recognition
 - **Responsive UI**: Score, health, and wave counter with real-time updates
 
 ### Technical Features
@@ -66,12 +69,12 @@ npm start
 
 **Desktop:**
 - Arrow Keys or WASD: Move your ship
-- Space: Shoot bullets
+- Shooting: Automatic (no button needed!)
 - ESC: Return to menu
 
 **Mobile:**
 - Touch/drag: Move your ship
-- Auto-fire: Bullets fire automatically
+- Shooting: Automatic (no button needed!)
 
 ### Objective
 
@@ -82,9 +85,17 @@ npm start
 
 ### Enemies
 
-1. **Fast Enemy** (Pink): Quick but fragile - 1 HP
-2. **Medium Enemy** (Purple): Balanced threat - 2 HP
-3. **Heavy Enemy** (Cyan): Slow but tanky - 3 HP
+Each enemy has a unique shape and color for easy identification:
+
+1. **Scout** (Red Triangle): Fast and agile but fragile - 1 HP, rotates and moves quickly
+2. **Cruiser** (Purple Pentagon): Medium speed with moderate health - 2 HP, balanced threat
+3. **Battleship** (Orange Hexagon): Slow but heavily armored - 3 HP, intimidating presence
+
+All enemies feature:
+- Distinctive geometric shapes (triangles, pentagons, hexagons)
+- Rotating animations for visual appeal
+- Random horizontal sine-wave movement patterns
+- Glowing cores and accent colors
 
 ### Powerups
 

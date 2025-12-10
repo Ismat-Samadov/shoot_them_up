@@ -77,10 +77,10 @@ export default function Home() {
                       <strong>Arrow Keys</strong> or <strong>WASD</strong> - Move ship
                     </li>
                     <li>
-                      <strong>Space</strong> - Shoot
+                      <strong>Shooting</strong> - Automatic (no button needed!)
                     </li>
                     <li>
-                      <strong>Mobile</strong> - Touch to move, auto-shoot
+                      <strong>Mobile</strong> - Touch and drag to move
                     </li>
                   </ul>
                 </div>

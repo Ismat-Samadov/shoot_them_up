@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 
 export default class GameScene extends Phaser.Scene {
-  private player!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.GameObjects.Container;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: {
     up: Phaser.Input.Keyboard.Key;
@@ -23,6 +23,7 @@ export default class GameScene extends Phaser.Scene {
   private wave: number = 1;
   private enemiesInWave: number = 5;
   private enemiesDefeated: number = 0;
+  private enemiesSpawned: number = 0;
   private playerSpeed: number = 300;
   private hasShield: boolean = false;
   private shieldGraphics!: Phaser.GameObjects.Arc;
@@ -132,18 +133,38 @@ export default class GameScene extends Phaser.Scene {
     const centerX = this.scale.width / 2;
     const centerY = this.scale.height - 100;
 
-    // Player ship body
-    this.player = this.add.rectangle(centerX, centerY, 30, 40, 0x00f3ff);
-    this.physics.add.existing(this.player);
-    (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+    // Create player ship with distinctive arrow/spaceship design
+    this.player = this.add.container(centerX, centerY);
 
-    // Add glow effect
-    this.player.setStrokeStyle(2, 0x00ffff, 0.8);
+    // Main body (triangle pointing up)
+    const triangle = this.add.triangle(0, 0, -15, 20, 15, 20, 0, -20, 0x00f3ff);
+    triangle.setStrokeStyle(2, 0x00ffff, 1);
+
+    // Cockpit highlight
+    const cockpit = this.add.circle(0, 0, 5, 0x00ffff, 0.8);
+
+    // Wings
+    const leftWing = this.add.triangle(-10, 10, -5, 0, -15, 10, -10, 15, 0x0099cc);
+    leftWing.setStrokeStyle(1, 0x00f3ff, 0.8);
+    const rightWing = this.add.triangle(10, 10, 5, 0, 15, 10, 10, 15, 0x0099cc);
+    rightWing.setStrokeStyle(1, 0x00f3ff, 0.8);
+
+    // Engine glow
+    const engineGlow = this.add.ellipse(0, 20, 12, 8, 0x00ff88, 0.6);
+
+    this.player.add([leftWing, rightWing, triangle, engineGlow, cockpit]);
+
+    this.physics.add.existing(this.player);
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    playerBody.setCollideWorldBounds(true);
+    playerBody.setSize(30, 40);
+    playerBody.setOffset(-15, -20);
 
     // Shield graphics (hidden initially)
     this.shieldGraphics = this.add.circle(centerX, centerY, 40, 0x00ff88, 0.3);
     this.shieldGraphics.setStrokeStyle(2, 0x00ff88, 0.8);
     this.shieldGraphics.setVisible(false);
+    this.shieldGraphics.setDepth(50);
   }
 
   createUI() {
@@ -185,7 +206,7 @@ export default class GameScene extends Phaser.Scene {
       const hint = this.add.text(
         this.scale.width / 2,
         this.scale.height - 30,
-        "Touch to move • Auto-fire enabled",
+        "Touch and drag to move • Auto-fire active",
         {
           fontSize: "16px",
           color: "#8b5cf6",
@@ -216,12 +237,6 @@ export default class GameScene extends Phaser.Scene {
           (dy / distance) * this.playerSpeed
         );
       }
-
-      // Auto-fire on mobile
-      if (time > this.lastFired + this.fireRate) {
-        this.fireBullet();
-        this.lastFired = time;
-      }
     } else {
       // Keyboard controls
       if (this.cursors.left.isDown || this.wasdKeys.left.isDown) {
@@ -235,12 +250,12 @@ export default class GameScene extends Phaser.Scene {
       } else if (this.cursors.down.isDown || this.wasdKeys.down.isDown) {
         body.setVelocityY(this.playerSpeed);
       }
+    }
 
-      // Shooting
-      if (this.spaceKey.isDown && time > this.lastFired + this.fireRate) {
-        this.fireBullet();
-        this.lastFired = time;
-      }
+    // Auto-fire continuously (no button press needed)
+    if (time > this.lastFired + this.fireRate) {
+      this.fireBullet();
+      this.lastFired = time;
     }
 
     // Update shield position
@@ -257,18 +272,19 @@ export default class GameScene extends Phaser.Scene {
       return true;
     });
 
-    // Clean up off-screen enemies
+    // Clean up off-screen enemies (count as escaped)
     this.enemies.children.each((enemy: Phaser.GameObjects.GameObject) => {
-      const e = enemy as Phaser.GameObjects.Rectangle;
-      if (e.y > this.scale.height + 10) {
+      const e = enemy as Phaser.GameObjects.Container;
+      if (e.y > this.scale.height + 50) {
+        this.enemiesDefeated++; // Count escaped enemies
         e.destroy();
       }
       return true;
     });
 
-    // Check if wave is complete
+    // Check if wave is complete (all enemies spawned and accounted for)
     if (
-      this.enemies.countActive(true) === 0 &&
+      this.enemiesSpawned >= this.enemiesInWave &&
       this.enemiesDefeated >= this.enemiesInWave
     ) {
       this.nextWave();
@@ -306,11 +322,14 @@ export default class GameScene extends Phaser.Scene {
 
   spawnWave() {
     this.enemiesDefeated = 0;
+    this.enemiesSpawned = 0;
     this.enemiesInWave = 5 + this.wave * 2;
 
     for (let i = 0; i < this.enemiesInWave; i++) {
       this.time.delayedCall(i * 500, () => {
-        this.spawnEnemy();
+        if (!this.gameOver) {
+          this.spawnEnemy();
+        }
       });
     }
 
@@ -338,52 +357,93 @@ export default class GameScene extends Phaser.Scene {
   }
 
   spawnEnemy() {
+    this.enemiesSpawned++;
     const x = Phaser.Math.Between(50, this.scale.width - 50);
     const y = -50;
 
     const enemyType = Phaser.Math.Between(1, 3);
-    let enemy: Phaser.GameObjects.Rectangle;
+    let enemy: Phaser.GameObjects.Container;
     let speed: number;
     let color: number;
+    let accentColor: number;
     let health: number;
+    let size: number;
+
+    enemy = this.add.container(x, y);
 
     switch (enemyType) {
-      case 1: // Fast, weak
+      case 1: // Fast, weak - Small triangle pointing down (RED)
         color = 0xff006e;
+        accentColor = 0xff3399;
         speed = 150 + this.wave * 10;
         health = 1;
-        enemy = this.add.rectangle(x, y, 25, 25, color);
+        size = 20;
+
+        const smallTri = this.add.triangle(0, 0, -12, -12, 12, -12, 0, 12, color);
+        smallTri.setStrokeStyle(2, accentColor, 1);
+        const smallCore = this.add.circle(0, 0, 4, accentColor);
+        enemy.add([smallTri, smallCore]);
         break;
-      case 2: // Medium
+
+      case 2: // Medium - Pentagon (PURPLE)
         color = 0x8b5cf6;
+        accentColor = 0xb794f6;
         speed = 100 + this.wave * 8;
         health = 2;
-        enemy = this.add.rectangle(x, y, 30, 30, color);
+        size = 25;
+
+        const pentagon = this.add.polygon(0, 0, [
+          0, -15, 14, -5, 9, 12, -9, 12, -14, -5
+        ], color);
+        pentagon.setStrokeStyle(2, accentColor, 1);
+        const medCore1 = this.add.circle(0, 0, 5, accentColor, 0.8);
+        const medCore2 = this.add.circle(0, 0, 3, 0xffffff, 0.6);
+        enemy.add([pentagon, medCore1, medCore2]);
         break;
-      case 3: // Slow, strong
-        color = 0x00f3ff;
+
+      case 3: // Slow, strong - Hexagon (ORANGE/YELLOW)
+        color = 0xff9500;
+        accentColor = 0xffbb33;
         speed = 70 + this.wave * 5;
         health = 3;
-        enemy = this.add.rectangle(x, y, 35, 35, color);
+        size = 30;
+
+        const hexagon = this.add.polygon(0, 0, [
+          0, -18, 16, -9, 16, 9, 0, 18, -16, 9, -16, -9
+        ], color);
+        hexagon.setStrokeStyle(2, accentColor, 1);
+        const heavyCore = this.add.circle(0, 0, 6, accentColor);
+        const heavyInner = this.add.polygon(0, 0, [
+          0, -8, 7, -4, 7, 4, 0, 8, -7, 4, -7, -4
+        ], 0xffdd66, 0.8);
+        enemy.add([hexagon, heavyCore, heavyInner]);
         break;
+
       default:
         color = 0xff006e;
+        accentColor = 0xff3399;
         speed = 100;
         health = 1;
-        enemy = this.add.rectangle(x, y, 25, 25, color);
+        size = 20;
+
+        const defaultTri = this.add.triangle(0, 0, -12, -12, 12, -12, 0, 12, color);
+        defaultTri.setStrokeStyle(2, accentColor, 1);
+        enemy.add([defaultTri]);
     }
 
-    enemy.setStrokeStyle(2, color, 0.8);
     enemy.setData("health", health);
     enemy.setData("maxHealth", health);
+    enemy.setData("enemyType", enemyType);
 
     this.enemies.add(enemy);
     this.physics.add.existing(enemy);
 
     const enemyBody = enemy.body as Phaser.Physics.Arcade.Body;
     enemyBody.setVelocityY(speed);
+    enemyBody.setSize(size, size);
+    enemyBody.setOffset(-size / 2, -size / 2);
 
-    // Add sine wave movement for variety
+    // Add sine wave movement for variety (50% chance)
     if (Phaser.Math.Between(0, 1) === 1) {
       this.tweens.add({
         targets: enemy,
@@ -394,6 +454,15 @@ export default class GameScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
     }
+
+    // Pulse animation for visual interest
+    this.tweens.add({
+      targets: enemy,
+      angle: Phaser.Math.Between(0, 1) === 1 ? 360 : -360,
+      duration: 3000 + Phaser.Math.Between(-500, 500),
+      repeat: -1,
+      ease: "Linear",
+    });
   }
 
   hitEnemy(
@@ -401,7 +470,7 @@ export default class GameScene extends Phaser.Scene {
     enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
   ) {
     const bulletObj = bullet as Phaser.GameObjects.Rectangle;
-    const enemyObj = enemy as Phaser.GameObjects.Rectangle;
+    const enemyObj = enemy as Phaser.GameObjects.Container;
 
     bulletObj.destroy();
 
@@ -414,8 +483,12 @@ export default class GameScene extends Phaser.Scene {
       this.scoreText.setText(`Score: ${this.score}`);
       this.enemiesDefeated++;
 
+      // Get enemy type for color
+      const enemyType = enemyObj.getData("enemyType") || 1;
+      const colors = [0xff006e, 0x8b5cf6, 0xff9500];
+
       // Explosion effect
-      this.createExplosion(enemyObj.x, enemyObj.y, enemyObj.fillColor);
+      this.createExplosion(enemyObj.x, enemyObj.y, colors[enemyType - 1]);
 
       // Chance to drop powerup
       if (Phaser.Math.Between(1, 100) <= 15) {
@@ -427,7 +500,7 @@ export default class GameScene extends Phaser.Scene {
       // Flash enemy to show damage
       this.tweens.add({
         targets: enemyObj,
-        alpha: 0.3,
+        alpha: 0.5,
         duration: 100,
         yoyo: true,
       });
@@ -438,12 +511,13 @@ export default class GameScene extends Phaser.Scene {
     player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
     enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
   ) {
-    const enemyObj = enemy as Phaser.GameObjects.Rectangle;
+    const enemyObj = enemy as Phaser.GameObjects.Container;
 
     if (this.hasShield) {
       // Shield absorbs hit
       this.hasShield = false;
       this.shieldGraphics.setVisible(false);
+      this.enemiesDefeated++; // Count as defeated
       enemyObj.destroy();
       return;
     }
@@ -460,6 +534,7 @@ export default class GameScene extends Phaser.Scene {
       repeat: 3,
     });
 
+    this.enemiesDefeated++; // Count as defeated
     enemyObj.destroy();
 
     if (this.health <= 0) {
